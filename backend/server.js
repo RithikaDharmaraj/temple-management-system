@@ -4,9 +4,11 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
+const donorRoutes = require("./routes/donorRoutes");
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/donors", donorRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend Running");

@@ -1,20 +1,9 @@
 import { Link, Routes, Route } from "react-router-dom";
 
-function Dashboard() {
-  return <h1 className="text-2xl">Dashboard</h1>;
-}
-
-function Donors() {
-  return <h1 className="text-2xl">Donors</h1>;
-}
-
-function Payments() {
-  return <h1 className="text-2xl">Payments</h1>;
-}
-
-function Expenses() {
-  return <h1 className="text-2xl">Expenses</h1>;
-}
+import Dashboard from "./pages/Dashboard";
+import Donors from "./pages/Donors";
+import Payments from "./pages/Payments";
+import Expenses from "./pages/Expenses";
 
 function App() {
   return (
