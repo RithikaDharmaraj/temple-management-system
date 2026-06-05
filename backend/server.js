@@ -6,11 +6,13 @@ require("dotenv").config();
 const app = express();
 const donorRoutes = require("./routes/donorRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 app.use(cors());
 app.use(express.json());
 app.use("/api/donors", donorRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 
 app.get("/", (req, res) => {

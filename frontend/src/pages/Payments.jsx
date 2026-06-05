@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
 
 import axios from "axios";
 
-import {
-  getPayments,
-  createPayment,
-} from "../services/paymentService";
+import { getPayments, createPayment } from "../services/paymentService";
 
 function Payments() {
   const [payments, setPayments] = useState([]);
@@ -26,9 +24,7 @@ function Payments() {
   };
 
   const fetchDonors = async () => {
-    const response = await axios.get(
-      "http://localhost:5000/api/donors"
-    );
+    const response = await axios.get("http://localhost:5000/api/donors");
 
     setDonors(response.data);
   };
@@ -61,11 +57,44 @@ function Payments() {
     });
   };
 
+  const generateReceipt = (payment) => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+
+    doc.text("Temple Donation Receipt", 20, 20);
+
+    doc.setFontSize(12);
+
+    let y = 40;
+
+    doc.text(
+      `Date: ${new Date(payment.paymentDate).toLocaleDateString()}`,
+      20,
+      y,
+    );
+
+    y += 10;
+
+    doc.text(`Donor Name: ${payment.donorId?.name}`, 20, y);
+
+    y += 10;
+
+    doc.text(`Amount Paid: Rs. ${payment.amount}`, 20, y);
+
+    y += 10;
+
+    doc.text(`Payment Method: ${payment.paymentMethod}`, 20, y);
+
+    y += 20;
+
+    doc.text("Thank You For Your Contribution", 20, y);
+
+    doc.save(`receipt-${payment._id}.pdf`);
+  };
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-5">
-        Payments
-      </h1>
+      <h1 className="text-3xl font-bold mb-5">Payments</h1>
 
       <form
         onSubmit={handleSubmit}
@@ -78,15 +107,10 @@ function Payments() {
             onChange={handleChange}
             className="border p-2"
           >
-            <option value="">
-              Select Donor
-            </option>
+            <option value="">Select Donor</option>
 
             {donors.map((donor) => (
-              <option
-                key={donor._id}
-                value={donor._id}
-              >
+              <option key={donor._id} value={donor._id}>
                 {donor.name}
               </option>
             ))}
@@ -135,31 +159,27 @@ function Payments() {
               <th>Amount</th>
               <th>Method</th>
               <th>Date</th>
+              <th>Receipt</th>
             </tr>
           </thead>
 
           <tbody>
             {payments.map((payment) => (
-              <tr
-                key={payment._id}
-                className="text-center border-b"
-              >
-                <td>
-                  {payment.donorId?.name}
-                </td>
+              <tr key={payment._id} className="text-center border-b">
+                <td>{payment.donorId?.name}</td>
 
-                <td>
-                  ₹ {payment.amount}
-                </td>
+                <td>₹ {payment.amount}</td>
 
-                <td>
-                  {payment.paymentMethod}
-                </td>
+                <td>{payment.paymentMethod}</td>
 
+                <td>{new Date(payment.paymentDate).toLocaleDateString()}</td>
                 <td>
-                  {new Date(
-                    payment.paymentDate
-                  ).toLocaleDateString()}
+                  <button
+                    onClick={() => generateReceipt(payment)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded"
+                  >
+                    Receipt
+                  </button>
                 </td>
               </tr>
             ))}
