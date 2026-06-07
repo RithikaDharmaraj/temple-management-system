@@ -1,7 +1,9 @@
 const express = require("express");
+
 const router = express.Router();
 
 const Payment = require("../models/Payment");
+
 const Donor = require("../models/Donor");
 
 router.post("/", async (req, res) => {
@@ -9,29 +11,61 @@ router.post("/", async (req, res) => {
     const {
       donorId,
       amount,
-      paymentMethod,
-      note,
+      paymentDate,
     } = req.body;
 
-    const payment = new Payment({
-      donorId,
-      amount,
-      paymentMethod,
-      note,
-    });
+    if (!donorId || !amount) {
+      return res.status(400).json({
+        message:
+          "Donor and amount are required",
+      });
+    }
+
+    const donor = await Donor.findById(
+      donorId
+    );
+
+    if (!donor) {
+      return res.status(404).json({
+        message: "Donor not found",
+      });
+    }
+
+    const formattedDate =
+  paymentDate
+    ? new Date(paymentDate)
+    : new Date();
+
+    console.log(req.body);
+const payment = new Payment({
+  donorId,
+  amount,
+  paymentDate:
+    formattedDate,
+});
 
     await payment.save();
 
-    const donor = await Donor.findById(donorId);
+    donor.totalPaid += Number(
+  amount || 0
+);
 
-    donor.totalPaid += Number(amount);
-
-    donor.pendingAmount =
-      donor.promisedAmount - donor.totalPaid;
+    donor.pendingAmount = Math.max(
+      donor.promisedAmount -
+        donor.totalPaid,
+      0
+    );
 
     await donor.save();
 
-    res.status(201).json(payment);
+    const populatedPayment =
+      await Payment.findById(
+        payment._id
+      ).populate("donorId");
+
+    res.status(201).json(
+      populatedPayment
+    );
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -41,8 +75,12 @@ router.post("/", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const payments = await Payment.find()
-      .populate("donorId");
+    const payments =
+      await Payment.find()
+        .populate("donorId")
+        .sort({
+          paymentDate: -1,
+        });
 
     res.json(payments);
   } catch (error) {
@@ -51,5 +89,28 @@ router.get("/", async (req, res) => {
     });
   }
 });
+
+router.get(
+  "/donor/:donorId",
+  async (req, res) => {
+    try {
+      const payments =
+        await Payment.find({
+          donorId:
+            req.params.donorId,
+        })
+          .populate("donorId")
+          .sort({
+            paymentDate: -1,
+          });
+
+      res.json(payments);
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  }
+);
 
 module.exports = router;

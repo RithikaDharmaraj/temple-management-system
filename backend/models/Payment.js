@@ -17,15 +17,6 @@ const paymentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-
-    paymentMethod: {
-      type: String,
-      default: "Cash",
-    },
-
-    note: {
-      type: String,
-    },
   },
   {
     timestamps: true,

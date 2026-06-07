@@ -5,18 +5,28 @@ const donorSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
 
     phone: {
       type: String,
+      trim: true,
     },
 
     address: {
       type: String,
+      trim: true,
     },
 
-    lecture: {
+    ledger: {
       type: String,
+      enum: [
+        "A Ledger",
+        "B Ledger",
+        "C Ledger",
+        "D Ledger",
+      ],
+      default: "D Ledger",
     },
 
     promisedAmount: {
@@ -33,10 +43,18 @@ const donorSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    donorDate: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model("Donor", donorSchema);
+module.exports = mongoose.model(
+  "Donor",
+  donorSchema
+);
