@@ -26,6 +26,11 @@ function Payments() {
     useState("");
 
   const [
+    donorSuggestions,
+    setDonorSuggestions,
+  ] = useState([]);
+
+  const [
     filteredAddresses,
     setFilteredAddresses,
   ] = useState([]);
@@ -71,31 +76,60 @@ function Payments() {
     fetchDonors();
   }, []);
 
-  // NAME SEARCH
+  // DONOR NAME SEARCH
 
-  const handleNameChange = (name) => {
-    setSelectedName(name);
+  const handleNameChange = (
+    value
+  ) => {
+    const cleanedValue =
+      value.trim();
 
-    const searchValue =
-      name.trim();
+    setSelectedName(
+      cleanedValue
+    );
 
     const matchedDonors =
       donors.filter((donor) =>
         donor.name
           .trim()
+          .toLowerCase()
           .includes(
-            searchValue.trim()
+            cleanedValue.toLowerCase()
           )
+      );
+
+    setDonorSuggestions(
+      matchedDonors
+    );
+
+    setFilteredAddresses([]);
+
+    setFormData({
+      ...formData,
+      donorId: "",
+    });
+  };
+
+  // SELECT DONOR NAME
+
+  const selectDonorName = (
+    donorName
+  ) => {
+    setSelectedName(
+      donorName
+    );
+
+    const matchedDonors =
+      donors.filter(
+        (donor) =>
+          donor.name === donorName
       );
 
     setFilteredAddresses(
       matchedDonors
     );
 
-    setFormData({
-      ...formData,
-      donorId: "",
-    });
+    setDonorSuggestions([]);
   };
 
   // ADDRESS SELECT
@@ -109,11 +143,10 @@ function Payments() {
     });
   };
 
-  // FILTER SEARCH
+  // FILTER NAME SEARCH
 
   const handlePaymentFilterName =
     (value) => {
-
       const cleanedValue =
         value.trim();
 
@@ -121,8 +154,9 @@ function Payments() {
         donors.filter((donor) =>
           donor.name
             .trim()
+            .toLowerCase()
             .includes(
-              cleanedValue
+              cleanedValue.toLowerCase()
             )
         );
 
@@ -175,6 +209,8 @@ function Payments() {
 
     setFilteredAddresses([]);
 
+    setDonorSuggestions([]);
+
     setFormData({
       donorId: "",
       amount: "",
@@ -190,13 +226,15 @@ function Payments() {
 
   const filteredPayments =
     payments.filter((payment) => {
-
       const matchesName =
         filters.donorName === "" ||
         payment.donorId?.name
           .trim()
+          .toLowerCase()
           .includes(
-            filters.donorName.trim()
+            filters.donorName
+              .trim()
+              .toLowerCase()
           );
 
       const matchesAddress =
@@ -220,7 +258,6 @@ function Payments() {
 
   const generateDonorStatement =
     async (donorId) => {
-
       const response =
         await axios.get(
           `http://localhost:5000/api/payments/donor/${donorId}`
@@ -257,12 +294,16 @@ function Payments() {
         </h1>
 
         <p>Name: ${donor.name}</p>
+
         <br>
+
         <p>Address: ${donor.address}</p>
+
         <br>
-        <p> Phone Number: ${donor.phone}
+
+        <p>Phone Number: ${donor.phone}</p>
+
         <br>
-        <br/>
 
         <table border="1" cellspacing="0" cellpadding="10" width="100%">
           <thead>
@@ -293,7 +334,7 @@ function Payments() {
           </tbody>
         </table>
 
-        <br/>
+        <br>
 
         <h3>
           Total Paid:
@@ -367,15 +408,54 @@ function Payments() {
 
           {/* DONOR NAME */}
 
-          <ReactTransliterate
-            lang="ta"
-            value={selectedName}
-            onChangeText={(text) =>
-              handleNameChange(text)
-            }
-            placeholder="Type Donor Name"
-            className="border p-3 rounded w-full"
-          />
+          <div className="relative">
+            <ReactTransliterate
+              lang="ta"
+              value={selectedName}
+              onChangeText={(text) =>
+                handleNameChange(
+                  text
+                )
+              }
+              placeholder="Type Donor Name"
+              className="border p-3 rounded w-full"
+            />
+
+            {donorSuggestions.length >
+              0 &&
+              selectedName !==
+                "" && (
+                <div className="absolute bg-white border rounded shadow-lg w-full max-h-52 overflow-y-auto z-50">
+                  {donorSuggestions.map(
+                    (donor) => (
+                      <div
+                        key={
+                          donor._id
+                        }
+                        onClick={() =>
+                          selectDonorName(
+                            donor.name
+                          )
+                        }
+                        className="p-3 hover:bg-gray-100 cursor-pointer border-b"
+                      >
+                        <p className="font-medium">
+                          {
+                            donor.name
+                          }
+                        </p>
+
+                        <p className="text-sm text-gray-500">
+                          {
+                            donor.address
+                          }
+                        </p>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+          </div>
 
           {/* ADDRESS */}
 
@@ -439,8 +519,6 @@ function Payments() {
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-          {/* FILTER NAME */}
-
           <ReactTransliterate
             lang="ta"
             value={filters.donorName}
@@ -452,8 +530,6 @@ function Payments() {
             placeholder="Search Donor Name"
             className="border p-3 rounded w-full"
           />
-
-          {/* FILTER ADDRESS */}
 
           <select
             value={
@@ -467,7 +543,8 @@ function Payments() {
               })
             }
             disabled={
-              filters.donorName === ""
+              filters.donorName ===
+              ""
             }
             className="border p-3 rounded"
           >
@@ -487,8 +564,6 @@ function Payments() {
             )}
           </select>
 
-          {/* FILTER LEDGER */}
-
           <select
             value={filters.ledger}
             onChange={(e) =>
@@ -499,8 +574,10 @@ function Payments() {
               })
             }
             disabled={
-              filters.donorName !== "" ||
-              filters.donorAddress !== ""
+              filters.donorName !==
+                "" ||
+              filters.donorAddress !==
+                ""
             }
             className="border p-3 rounded"
           >
@@ -531,7 +608,6 @@ function Payments() {
 
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="w-full border-collapse">
-
           <thead>
             <tr className="bg-gray-100">
 
@@ -568,7 +644,6 @@ function Payments() {
                   key={payment._id}
                   className="border-b hover:bg-gray-50"
                 >
-
                   <td className="p-4 font-medium">
                     {
                       payment.donorId
@@ -591,7 +666,8 @@ function Payments() {
                   </td>
 
                   <td className="p-4">
-                    Rs. {payment.amount}
+                    Rs.{" "}
+                    {payment.amount}
                   </td>
 
                   <td className="p-4">
