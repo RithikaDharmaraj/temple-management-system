@@ -2,7 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const Donor = require("../models/Donor");
+const Donor = require("../models/donor");
 
 const Payment = require("../models/Payment");
 

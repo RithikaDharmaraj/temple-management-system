@@ -4,7 +4,7 @@ const router = express.Router();
 
 const Payment = require("../models/Payment");
 
-const Donor = require("../models/Donor");
+const Donor = require("../models/donor");
 
 router.post("/", async (req, res) => {
   try {
