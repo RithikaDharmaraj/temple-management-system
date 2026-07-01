@@ -54,6 +54,11 @@ function Payments() {
       paymentDate: "",
     });
 
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const rowsPerPage = 20;
+
   const fetchPayments = async () => {
     const data = await getPayments();
 
@@ -170,6 +175,7 @@ function Payments() {
         donorAddress: "",
         ledger: "",
       });
+      setCurrentPage(1);
     };
 
   // FORM CHANGE
@@ -254,143 +260,180 @@ function Payments() {
       );
     });
 
+    const totalPages = Math.ceil(
+      filteredPayments.length /
+        rowsPerPage
+    );
+
+    const paginatedPayments =
+      filteredPayments.slice(
+        (currentPage - 1) *
+          rowsPerPage,
+        currentPage * rowsPerPage
+      );
+
+  const formatDate = (dateValue) => {
+    const date = new Date(dateValue);
+
+    const day = String(
+      date.getDate()
+    ).padStart(2, "0");
+
+    const month = String(
+      date.getMonth() + 1
+    ).padStart(2, "0");
+
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  };
   // PDF GENERATION
 
-  const generateDonorStatement =
-    async (donorId) => {
-      const response =
-        await axios.get(
-          `http://localhost:5000/api/payments/donor/${donorId}`
-        );
+  const generateDonorStatement = async (donorId) => {
+    const response = await axios.get(
+      `http://localhost:5000/api/payments/donor/${donorId}`
+    );
 
-      const donorPayments =
-        response.data;
+    const donorPayments = response.data;
 
-      if (
-        donorPayments.length === 0
-      )
-        return;
+    if (donorPayments.length === 0) return;
 
-      const donor =
-        donorPayments[0].donorId;
+    const donor = donorPayments[0].donorId;
+
+    const rowsPerPage = 32;
+    const totalPages = Math.ceil(
+      donorPayments.length / rowsPerPage
+    );
+
+    const pdf = new jsPDF("p", "mm", "a4");
+
+    for (
+      let page = 0;
+      page < totalPages;
+      page++
+    ) {
+      if (page > 0) pdf.addPage();
 
       const container =
-        document.createElement(
-          "div"
-        );
+        document.createElement("div");
 
-      container.style.padding =
-        "20px";
-
+      container.style.width = "800px";
       container.style.background =
         "white";
+      container.style.padding = "30px";
+      container.style.fontFamily =
+        "Arial, sans-serif";
+      container.style.boxSizing =
+        "border-box";
+      container.style.border =
+        "3px solid black";
 
-      container.style.width =
-        "700px";
+      const pagePayments =
+        donorPayments.slice(
+          page * rowsPerPage,
+          (page + 1) * rowsPerPage
+        );
 
-      container.innerHTML = `
-        <h1 style="font-size:24px;margin-bottom:20px;">
-          Donor Payment Statement
-        </h1>
+      let html = "";
 
-        <p>Name: ${donor.name}</p>
+      // HEADER ONLY FIRST PAGE
+      if (page === 0) {
+        html += `
+          <h1 style="text-align:center;margin-bottom:25px;">
+            Donor Payment Statement
+          </h1>
 
-        <br>
+          <p><b>Name:</b> ${donor.name}</p>
+          <p><b>Address:</b> ${donor.address}</p>
+          <p><b>Phone:</b> ${donor.phone || "-"}</p>
+          <br/>
+        `;
+      }
 
-        <p>Address: ${donor.address}</p>
-
-        <br>
-
-        <p>Phone Number: ${donor.phone}</p>
-
-        <br>
-
-        <table border="1" cellspacing="0" cellpadding="10" width="100%">
+      html += `
+        <table 
+          border="1" 
+          cellspacing="0" 
+          cellpadding="8"
+          width="100%"
+          style="border-collapse:collapse;text-align:left;"
+        >
           <thead>
             <tr>
               <th>Date</th>
               <th>Amount</th>
             </tr>
           </thead>
-
           <tbody>
-            ${donorPayments
-              .map(
-                (payment) => `
-              <tr>
-                <td>
-                  ${new Date(
-                    payment.paymentDate
-                  ).toLocaleDateString()}
-                </td>
-
-                <td>
-                  Rs. ${payment.amount}
-                </td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-
-        <br>
-
-        <h3>
-          Total Paid:
-          Rs. ${donor.totalPaid}
-        </h3>
       `;
 
+      pagePayments.forEach((payment) => {
+        html += `
+          <tr>
+            <td>
+              ${formatDate(payment.paymentDate)}
+            </td>
+            <td>
+              Rs. ${payment.amount}
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      // TOTAL ONLY LAST PAGE
+      if (page === totalPages - 1) {
+        html += `
+          <br/>
+          <h3>
+            Total Paid: Rs. ${donor.totalPaid}
+          </h3>
+        `;
+      }
+
+      container.innerHTML = html;
       document.body.appendChild(
         container
       );
 
       const canvas =
-        await html2canvas(
-          container
-        );
+        await html2canvas(container, {
+          scale: 2,
+        });
 
       const imgData =
-        canvas.toDataURL(
-          "image/png"
-        );
-
-      const pdf =
-        new jsPDF(
-          "p",
-          "mm",
-          "a4"
-        );
+        canvas.toDataURL("image/png");
 
       const pdfWidth =
         pdf.internal.pageSize.getWidth();
 
-      const imgWidth =
-        pdfWidth - 20;
-
-      const imgHeight =
+      const pdfHeight =
         (canvas.height *
-          imgWidth) /
+          (pdfWidth - 10)) /
         canvas.width;
 
       pdf.addImage(
         imgData,
         "PNG",
-        10,
-        10,
-        imgWidth,
-        imgHeight
-      );
-
-      pdf.save(
-        `${donor.name}-statement.pdf`
+        5,
+        5,
+        pdfWidth - 10,
+        pdfHeight
       );
 
       document.body.removeChild(
         container
       );
-    };
+    }
+
+    pdf.save(
+      `${donor.name}-statement.pdf`
+    );
+  };
 
   return (
     <div>
@@ -535,13 +578,13 @@ function Payments() {
             value={
               filters.donorAddress
             }
-            onChange={(e) =>
+            onChange={(e) => {
               setFilters({
                 ...filters,
-                donorAddress:
-                  e.target.value,
-              })
-            }
+                donorAddress: e.target.value,
+              });
+              setCurrentPage(1);
+            }}
             disabled={
               filters.donorName ===
               ""
@@ -566,13 +609,13 @@ function Payments() {
 
           <select
             value={filters.ledger}
-            onChange={(e) =>
+            onChange={(e) => {
               setFilters({
                 ...filters,
-                ledger:
-                  e.target.value,
-              })
-            }
+                ledger: e.target.value,
+              });
+              setCurrentPage(1);
+            }}
             disabled={
               filters.donorName !==
                 "" ||
@@ -638,7 +681,7 @@ function Payments() {
           </thead>
 
           <tbody>
-            {filteredPayments.map(
+            {paginatedPayments.map(
               (payment) => (
                 <tr
                   key={payment._id}
@@ -671,9 +714,7 @@ function Payments() {
                   </td>
 
                   <td className="p-4">
-                    {new Date(
-                      payment.paymentDate
-                    ).toLocaleDateString()}
+                    {formatDate(payment.paymentDate)}
                   </td>
 
                   <td className="p-4 text-center">
@@ -695,6 +736,41 @@ function Payments() {
             )}
           </tbody>
         </table>
+        <div className="flex justify-center items-center gap-4 py-4">
+          <button
+            disabled={
+              currentPage === 1
+            }
+            onClick={() =>
+              setCurrentPage(
+                currentPage - 1
+              )
+            }
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <span>
+            Page {currentPage} of{" "}
+            {totalPages || 1}
+          </span>
+
+          <button
+            disabled={
+              currentPage === totalPages ||
+              totalPages === 0
+            }
+            onClick={() =>
+              setCurrentPage(
+                currentPage + 1
+              )
+            }
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

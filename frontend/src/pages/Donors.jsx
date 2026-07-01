@@ -34,6 +34,11 @@ function Donors() {
       promisedAmount: "",
     });
 
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
+  const rowsPerPage = 20;
+
   const fetchDonors = async () => {
     try {
       const data = await getDonors();
@@ -136,7 +141,18 @@ function Donors() {
             filters.ledger)
       );
     });
+  
+  const totalPages = Math.ceil(
+    filteredDonors.length /
+      rowsPerPage
+  );
 
+  const paginatedDonors =
+    filteredDonors.slice(
+      (currentPage - 1) *
+        rowsPerPage,
+      currentPage * rowsPerPage
+    );
   // SUBMIT FORM
 
   const handleSubmit = async (e) => {
@@ -147,12 +163,31 @@ function Donors() {
     );
 
     if (editId) {
+      const existingDonor =
+        donors.find(
+          (donor) =>
+            donor._id === editId
+        );
+
+      const totalPaid =
+        existingDonor?.totalPaid || 0;
+
+      const promised =
+        Number(
+          formData.promisedAmount
+        ) || 0;
+
+      const pendingAmount =
+        promised - totalPaid;
+
       await updateDonor(editId, {
         ...formData,
         ledger,
+        totalPaid,
         pendingAmount:
-          formData.promisedAmount ||
-          0,
+          pendingAmount > 0
+            ? pendingAmount
+            : 0,
       });
 
       setEditId(null);
@@ -215,12 +250,13 @@ function Donors() {
           <ReactTransliterate
             lang="ta"
             value={formData.name}
-            onChangeText={(text) =>
+            onChangeText={(text) =>{
               setFormData({
                 ...formData,
                 name: text,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             placeholder="Donor Name"
             className="border p-3 rounded w-full"
           />
@@ -241,12 +277,13 @@ function Donors() {
           <ReactTransliterate
             lang="ta"
             value={formData.address}
-            onChangeText={(text) =>
+            onChangeText={(text) =>{
               setFormData({
                 ...formData,
                 address: text,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             placeholder="Address"
             className="border p-3 rounded w-full"
           />
@@ -284,12 +321,13 @@ function Donors() {
           <ReactTransliterate
             lang="ta"
             value={filters.name}
-            onChangeText={(text) =>
+            onChangeText={(text) =>{
               setFilters({
                 ...filters,
                 name: text,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             placeholder="Search Name"
             className="border p-3 rounded w-full"
           />
@@ -300,13 +338,14 @@ function Donors() {
             type="text"
             placeholder="Search Phone"
             value={filters.phone}
-            onChange={(e) =>
+            onChange={(e) =>{
               setFilters({
                 ...filters,
                 phone:
                   e.target.value,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             className="border p-3 rounded"
           />
 
@@ -315,12 +354,13 @@ function Donors() {
           <ReactTransliterate
             lang="ta"
             value={filters.address}
-            onChangeText={(text) =>
+            onChangeText={(text) =>{
               setFilters({
                 ...filters,
                 address: text,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             placeholder="Search Address"
             className="border p-3 rounded w-full"
           />
@@ -329,13 +369,14 @@ function Donors() {
 
           <select
             value={filters.ledger}
-            onChange={(e) =>
+            onChange={(e) =>{
               setFilters({
                 ...filters,
                 ledger:
                   e.target.value,
-              })
-            }
+              });
+              setCurrentPage(1);
+            }}
             className="border p-3 rounded"
           >
             <option value="">
@@ -404,7 +445,7 @@ function Donors() {
           <tbody>
             {filteredDonors.length >
             0 ? (
-              filteredDonors.map(
+              paginatedDonors.map(
                 (donor) => (
                   <tr
                     key={donor._id}
@@ -491,6 +532,40 @@ function Donors() {
             )}
           </tbody>
         </table>
+        <div className="flex justify-center items-center gap-4 py-4">
+          <button
+            disabled={currentPage === 1}
+            onClick={() =>
+              setCurrentPage(
+                (prev) => prev - 1
+              )
+            }
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+
+          <span>
+            Page {currentPage} of{" "}
+            {totalPages || 1}
+          </span>
+
+          <button
+            disabled={
+              currentPage ===
+                totalPages ||
+              totalPages === 0
+            }
+            onClick={() =>
+              setCurrentPage(
+                (prev) => prev + 1
+              )
+            }
+            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
